@@ -1,12 +1,13 @@
-# Full code adapted from GeeksforGeeks "Detect and Recognize Car License Plate from a Video in Real Time"
-
 import cv2
 import numpy as np
-from skimage.filters import threshold_local
-import tensorflow as tf
 from skimage import measure
 import imutils
-import os
+import pytesseract
+
+# If on Windows, set this path:
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+# -------------------- Helper Functions --------------------
 
 def sort_cont(character_contours):
     i = 0
@@ -16,6 +17,7 @@ def sort_cont(character_contours):
                                                       key=lambda b: b[1][i],
                                                       reverse=False))
     return character_contours
+
 
 def segment_chars(plate_img, fixed_width):
     V = cv2.split(cv2.cvtColor(plate_img, cv2.COLOR_BGR2HSV))[2]
@@ -72,6 +74,8 @@ def segment_chars(plate_img, fixed_width):
     else:
         return None
 
+
+# -------------------- Plate Detection Class --------------------
 
 class PlateFinder:
     def __init__(self, minPlateArea, maxPlateArea):
@@ -174,30 +178,79 @@ class PlateFinder:
         return self.preRatioCheck(area, width, height)
 
 
-if __name__ == "__main__":
-    findPlate = PlateFinder(minPlateArea=4100, maxPlateArea=15000)
+# -------------------- IMAGE PROCESSING --------------------
 
-    cap = cv2.VideoCapture("cars.mp4")  # Or replace 0 with video path
+def process_image(image_path):
+    """
+    Process a single image and return detected license plate text
+    """
+    findPlate = PlateFinder(minPlateArea=1000, maxPlateArea=50000)
+    img = cv2.imread(image_path)
 
-    while True:
+    # 🚨 Safety check
+    if img is None:
+        raise ValueError("❌ Image not loaded. Please upload a valid image file.")
+
+    detected_texts = set()
+
+    possible_plates = findPlate.find_possible_plates(img)
+
+    if possible_plates:
+        for plate_img, characters, coord in possible_plates:
+            gray_plate = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
+            gray_plate = cv2.bilateralFilter(gray_plate, 11, 17, 17)
+
+            text = pytesseract.image_to_string(
+                gray_plate,
+                config='--psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+            )
+
+            if text.strip():
+                detected_texts.add(text.strip())
+
+    return detected_texts
+
+
+# -------------------- VIDEO PROCESSING --------------------
+
+def process_video(video_path):
+    """
+    Process a video file and return:
+    1. List of frames with detected plates drawn
+    2. Set of detected license plate texts
+    """
+    findPlate = PlateFinder(minPlateArea=1000, maxPlateArea=50000)
+    cap = cv2.VideoCapture(video_path)
+
+    frames = []
+    detected_texts = set()
+
+    while cap.isOpened():
         ret, img = cap.read()
         if not ret:
             break
 
         possible_plates = findPlate.find_possible_plates(img)
+
         if possible_plates:
             for plate_img, characters, coord in possible_plates:
                 x, y = coord
-                cv2.rectangle(img, (x, y), (x + plate_img.shape[1], y + plate_img.shape[0]),
+                cv2.rectangle(img, (x, y),
+                              (x + plate_img.shape[1], y + plate_img.shape[0]),
                               (0, 255, 0), 2)
 
-                # Show each character separately
-                for idx, char_img in enumerate(characters):
-                    cv2.imshow(f"char_{idx}", char_img)
+                gray_plate = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
+                gray_plate = cv2.bilateralFilter(gray_plate, 11, 17, 17)
 
-        cv2.imshow("Video", img)
-        if cv2.waitKey(1) == ord('q'):
-            break
+                text = pytesseract.image_to_string(
+                    gray_plate,
+                    config='--psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                )
+
+                if text.strip():
+                    detected_texts.add(text.strip())
+
+        frames.append(img)
 
     cap.release()
-    cv2.destroyAllWindows()
+    return frames, detected_texts
