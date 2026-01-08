@@ -1,8 +1,29 @@
-# Real-time-License-plate-Recognition
-This project implements a Real-Time Automatic License Plate Detection System using Python and OpenCV. The system captures live video from a webcam, detects vehicle license plates, extracts the plate region, and segments individual alphanumeric characters from the plate.
+## License Plate Number Recognition
 
-This forms the foundation of ANPR (Automatic Number Plate Recognition) systems used in:
-- Traffic monitoring & enforcement
-- Toll collection systems
-- Parking automation
-- Security & surveillance applications 
+An automated system that detects a vehicle’s license plate from an image or video and extracts only the license plate number using OpenCV and OCR.
+
+### About the Project
+
+This project automatically identifies a car’s license plate and converts it into text. It demonstrates how traditional image processing techniques can be applied to real-world problems such as parking systems, security, and vehicle monitoring.
+
+### Features
+
+- Detects license plates from images or videos
+- Extracts and displays only the plate number
+- Lightweight and easy to understand
+- Web interface built using Streamlit
+
+### Tech Stack
+
+- Python
+- OpenCV – Image processing & plate detection
+- Tesseract OCR – Text extraction
+- Streamlit – User interface
+
+### How It Works
+
+- User uploads a car image or video
+- Image is preprocessed (grayscale, blur, edges)
+- Plate region is detected using contours
+- OCR extracts the alphanumeric characters
+- Only the license plate number is displayed
