@@ -1,6 +1,6 @@
 import streamlit as st
 import tempfile
-from main import process_video, process_image
+from plate_recognition import process_video, process_image
 
 st.set_page_config(page_title="License Plate Recognition", layout="centered")
 st.title("🚗 License Plate Number Recognition")
@@ -23,7 +23,10 @@ if uploaded_file is not None:
         tfile.flush()
 
         if file_type in ["mp4", "avi", "mov"]:
-            frames, texts = process_video(tfile.name)
+            frame_placeholder = st.empty()
+            text_placeholder = st.empty()
+
+            texts = process_video(tfile.name)
 
         elif file_type in ["jpg", "jpeg", "png"]:
             texts = process_image(tfile.name)
